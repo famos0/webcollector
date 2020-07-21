@@ -18,6 +18,7 @@ url = ""
 test = False
 domain = True
 threads = 1
+header = {}
 maxpages = 100
 def init():
     global pipeline 
@@ -27,4 +28,4 @@ def init():
     global test
     global url
     global maxpages
-    global maxpages
+    global header

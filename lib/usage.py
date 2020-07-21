@@ -50,6 +50,8 @@ def usage():
                                           Default 1
     -p --pipeline                       - print only choosen output. 2 
                                           possibilities : "urls" or "domains"
+    -H --header=HEADER                  - Header to add in request (example: --header 
+                                          "Referer: example.com" --header "User-Agent: IE")
     -T --test                           - Test mode. Will launch 10 requests starting
                                           from www.microsoft.com and with staying at 
                                           this domain

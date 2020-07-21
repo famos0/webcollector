@@ -19,7 +19,7 @@ def main(argv):
     settings.init()
 
     try:
-        opts, args = getopt.getopt(argv,"hu:p:s:U:t:dm:T",["help","url","test","pipeline","subs-collector","url-collector","threads","domains","maxpages"])
+        opts, args = getopt.getopt(argv,"hu:p:s:U:t:dm:T:H:",["help","url","test","pipeline","subs-collector","url-collector","threads","domains","maxpages","header"])
     except getopt.GetoptError as err:
         print(str(err))
         print()
@@ -56,7 +56,9 @@ def main(argv):
             settings.threads = int(a)
         elif o in ("-T","--test"):
             test = True
-
+        elif o in ("-H","--header"):
+            header, value = a.split(":")
+            settings.header.update({header.strip() : value.strip()})
         else:
             assert False,"Unhandle option"
 

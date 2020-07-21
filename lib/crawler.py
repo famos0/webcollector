@@ -22,13 +22,11 @@ crawled = collections.deque()
 
 pagequeue = collections.deque()
 
-pipeline = ""
-
 def crawl(sess, url, domain):
 
     try:
         print(url)
-        response = sess.get(url)
+        response = sess.get(url,headers = settings.header)
     except (requests.exceptions.MissingSchema, requests.exceptions.InvalidSchema):
     # if something wrong in schema
         if len(settings.pipeline) == 0:
@@ -102,7 +100,7 @@ def collectsubs(sublist,url):
     if sub.lower() in (string.lower() for string in sublist):
         return False
     else:
-        if pipeline == 'domains':
+        if settings.pipeline == 'domains':
             print(sub)
         return True
 
@@ -139,8 +137,8 @@ def pagehandler(pageurl, pageresponse, soup):
     """Function to be customized for processing of a single page.
 
     """
-    if pipeline !="domains":
-        if pipeline=="urls":
+    if settings.pipeline !="domains":
+        if settings.pipeline=="urls":
             print(pageurl)
         else:
             print(pageurl + " ({0} bytes)".format(len(pageresponse.text)))
