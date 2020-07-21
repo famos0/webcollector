@@ -55,6 +55,7 @@ def usage():
     -T --test                           - Test mode. Will launch 10 requests starting
                                           from www.microsoft.com and with staying at 
                                           this domain
+    -R --robots                         - Feed the spider with robots.txt of the domain
     """
     print(usage)
     sys.exit(0)

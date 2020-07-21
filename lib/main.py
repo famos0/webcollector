@@ -7,19 +7,18 @@ import getopt
 import os
 import validators
 from urllib.parse import urldefrag, urljoin, urlparse
+
 from lib.counter import Counter
-
 from lib.crawler import spider
-
 from lib.usage import usage, banner, title, extract
-
 import lib.settings as settings
+
 
 def main(argv):
     settings.init()
 
     try:
-        opts, args = getopt.getopt(argv,"hu:p:s:U:t:dm:T:H:",["help","url","test","pipeline","subs-collector","url-collector","threads","domains","maxpages","header"])
+        opts, args = getopt.getopt(argv,"hu:p:s:U:t:dm:T:H:R",["help","url","test","pipeline","subs-collector","url-collector","threads","domains","maxpages","header","robots"])
     except getopt.GetoptError as err:
         print(str(err))
         print()
@@ -59,6 +58,8 @@ def main(argv):
         elif o in ("-H","--header"):
             header, value = a.split(":")
             settings.header.update({header.strip() : value.strip()})
+        elif o in ("-R","--robots"):
+            settings.robots = True
         else:
             assert False,"Unhandle option"
 

@@ -12,6 +12,7 @@ import bs4
 import requests
 
 from lib.usage import title
+from lib.robots import get_robots
 import lib.settings as settings
 
 pages = Counter()
@@ -38,8 +39,12 @@ def crawl(sess, url, domain):
             print("*Connection refused*:", url)
             failed.increment()
         return
-    if not response.headers["content-type"].startswith("text/html"):
-        return  # don't crawl non-HTML content
+    try:
+        if not response.headers["content-type"].startswith("text/html"):
+            return  # don't crawl non-HTML content
+    except:
+        failed.increment()
+        return None
 
     soup = bs4.BeautifulSoup(response.text, "html.parser")
 
@@ -66,16 +71,16 @@ def spider(startpage, maxpages, singledomain):
     # queue of pages to be crawled
     pagequeue.append(startpage)
     domain = urlparse(startpage).netloc if singledomain else None
-    sess = requests.session()  # initialize the session
+    sess = requests.session()  
 
-    #######################
-    #
-    # TOADD: fill the buffer with robots.txt
-    #
-    ########################
+    # add robots.txt
+    if settings.robots:
+        pagequeue.extend(get_robots(domain))
+    
     if settings.pipeline == "" :
         print(settings.pipeline)
         title("crawled urls")
+
     while ((pagequeue or threading.active_count() > 1 )and (True if maxpages == 0  else  pages.value < maxpages)):
         if threading.active_count() <= settings.threads and pagequeue:
             url = pagequeue.popleft()  # get next page to crawl (FIFO queue)

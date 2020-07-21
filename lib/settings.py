@@ -20,6 +20,9 @@ domain = True
 threads = 1
 header = {}
 maxpages = 100
+robots = False
+proxy = {}
+
 def init():
     global pipeline 
     global threads 
@@ -29,3 +32,4 @@ def init():
     global url
     global maxpages
     global header
+    global robots
