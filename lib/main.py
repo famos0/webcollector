@@ -44,8 +44,8 @@ def main(argv):
                 usage()
             settings.pipeline = a
         elif o in ("-u","--url"):
-            if not validators.url(a):
-                print("Please input a valid url")
+            if not validators.url(a) and not os.path.isfile(a):
+                print("Please input a valid url or file of urls")
                 exit(0)
             settings.url = a
         elif o in ("-t","--threads"):

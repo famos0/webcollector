@@ -4,11 +4,12 @@
 
  - Header management
  - Get robots.txt
+- Use file of startup urls to get started
 
 # TO ADD
 
  - Add proxy
- - Use file of startup urls to get started 
+ - Add schema correction if schema error
  - Better way to manage report writting 
  - Support of all HTTP Verb
  - Parse js

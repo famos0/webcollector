@@ -69,14 +69,24 @@ def spider(startpage, maxpages, singledomain):
     singledomain = whether to only crawl links within startpage's domain
     """
     # queue of pages to be crawled
-    pagequeue.append(startpage)
-    domain = urlparse(startpage).netloc if singledomain else None
+    if (os.path.isfile(startpage)):
+        domain = []
+        # if feeded with filename, take the domain of the first line
+        with  open(startpage,'r') as urls:
+            for line in urls.readlines():
+                line = line.strip()
+                pagequeue.append(line)
+                if domain:
+                    domain.append(urlparse(line).netloc)
+                    pagequeue.extend(get_robots(urlparse(line).netloc))
+                
+    else:
+        pagequeue.append(startpage)
+        domain = urlparse(startpage).netloc if singledomain else None
+        if settings.robots and domain:
+            pagequeue.extend(get_robots(domain))
     sess = requests.session()  
 
-    # add robots.txt
-    if settings.robots:
-        pagequeue.extend(get_robots(domain))
-    
     if settings.pipeline == "" :
         print(settings.pipeline)
         title("crawled urls")
@@ -155,12 +165,19 @@ def samedomain(netloc1, netloc2):
     domain1 = netloc1.lower()
     if "." in domain1:
         domain1 = domain1.split(".")[-2] + "." + domain1.split(".")[-1]
-
-    domain2 = netloc2.lower()
-    if "." in domain2:
-        domain2 = domain2.split(".")[-2] + "." + domain2.split(".")[-1]
-
-    return domain1 == domain2
+    if netloc2 is str: 
+        domain2 = netloc2.lower()
+        if "." in domain2:
+            domain2 = domain2.split(".")[-2] + "." + domain2.split(".")[-1]
+        return domain1 == domain2
+    else:
+        domain2 = []
+        for nt2 in netloc2:
+            d2 = nt2.lower()
+            if "." in d2:
+                d2 = d2.split(".")[-2] + "." + d2.split(".")[-1]
+            domain2.append(d2)
+        return domain1 in domain2
 
 
 def url_in_list(url, listobj):
