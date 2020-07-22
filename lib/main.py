@@ -10,7 +10,7 @@ from urllib.parse import urldefrag, urljoin, urlparse
 
 from lib.counter import Counter
 from lib.crawler import spider
-from lib.usage import usage, banner, title, extract
+from lib.usage import usage, banner, title, extract,options
 import lib.settings as settings
 
 
@@ -18,7 +18,7 @@ def main(argv):
     settings.init()
 
     try:
-        opts, args = getopt.getopt(argv,"hu:p:s:U:t:dm:T:H:R",["help","url","test","pipeline","subs-collector","url-collector","threads","domains","maxpages","header","robots"])
+        opts, args = getopt.getopt(argv,"hu:p:s:U:t:dm:T:H:R",["help","url=","test","pipeline=","subs-collector=","url-collector=","threads=","domains","maxpages=","header=","robots","timeout="])
     except getopt.GetoptError as err:
         print(str(err))
         print()
@@ -60,13 +60,17 @@ def main(argv):
             settings.header.update({header.strip() : value.strip()})
         elif o in ("-R","--robots"):
             settings.robots = True
+        elif o in ("--timeout"):
+            settings.timeout = a
         else:
+            print(o)
             assert False,"Unhandle option"
 
     # set stdout to support UTF-8
     sys.stdout = open(sys.stdout.fileno(), mode="w", encoding="utf-8", buffering=1)
     if settings.pipeline == "":
         banner()
+        options()
     if settings.test:
         if settings.pipeline == "":
             title("Test mode")

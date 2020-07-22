@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
+import lib.settings as settings
 
 def title(title):
     print()
@@ -36,17 +37,17 @@ def usage():
     Usage: webcollector -u startup-url
 
     -u --url=startup-url                - url where to start crawling.
-    -s --subs-collector=destination     - collect and extract a list of all visited 
+    -s --subs-collector=DESTINATION     - collect and extract a list of all visited 
                                           domains/subdomains, and store them 
                                           in [destination].
-    -U --url-collector=destination      - collect and extract a list of all visited 
+    -U --url-collector=DESTINATION      - collect and extract a list of all visited 
                                           domains/subdomains, and store them 
                                           in [destination]                                          
     -d --domains                        - not limit crawl links within startpage's 
                                           domain.
-    -m --maxpages=number                - give max pages to crawl. Enter 0 for 
+    -m --maxpages=NUMBER                - give max pages to crawl. Enter 0 for 
                                           infinite :). Default 10
-    -t --threads=number                 - give max threads to run in the same time. 
+    -t --threads=NUMBER                 - give max threads to run in the same time. 
                                           Default 1
     -p --pipeline                       - print only choosen output. 2 
                                           possibilities : "urls" or "domains"
@@ -56,6 +57,7 @@ def usage():
                                           from www.microsoft.com and with staying at 
                                           this domain
     -R --robots                         - Feed the spider with robots.txt of the domain
+    --timeout=SECONDS                   - Number of seconds to wait after a request
     """
     print(usage)
     sys.exit(0)
@@ -63,3 +65,10 @@ def usage():
 def extract(filename,list):
     with open(filename, mode='wt', encoding='utf-8') as f:
         f.write('\n'.join(list))
+
+def options():
+    print("Staying on domain: "+("Yes" if settings.domain else "No"))
+    print("Maximum pages crawled: "+str(settings.maxpages))
+    print("Number of thread(s): "+str(settings.threads))
+    print("Header: "+str(settings.header))
+    print("Feeding with robots.txt: "+("Yes" if settings.robots else "No"))

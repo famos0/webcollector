@@ -4,7 +4,9 @@
 
  - Header management
  - Get robots.txt
-- Use file of startup urls to get started
+ - Use file of startup urls to get started
+ - add timeout
+
 
 # TO ADD
 
@@ -15,5 +17,4 @@
  - Parse js
  - if new domain, ask for permission to request
  - add blacklist of unusable domains (microsoft.com, bing.com, etc.)
- - add timeout
  - base on a burp request file

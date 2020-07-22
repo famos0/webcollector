@@ -22,6 +22,7 @@ header = {}
 maxpages = 100
 robots = False
 proxy = {}
+timeout = 0
 
 def init():
     global pipeline 
@@ -33,3 +34,4 @@ def init():
     global maxpages
     global header
     global robots
+    global timeout

@@ -5,6 +5,7 @@ import sys
 import getopt
 import os
 import threading
+import time
 from urllib.parse import urldefrag, urljoin, urlparse
 from lib.counter import Counter
 
@@ -59,6 +60,7 @@ def crawl(sess, url, domain):
                 sublist.append(urlparse(link).netloc)
             if not url_in_list(link, crawled) and not url_in_list(link, pagequeue):
                 pagequeue.append(link)
+    time.sleep(int(settings.timeout))
 
 
 def spider(startpage, maxpages, singledomain):
@@ -129,7 +131,7 @@ def getlinks(pageurl, domain, soup):
 
     # get target URLs for all links on the page
     links = [a.attrs.get("href") for a in soup.select("a[href]")]
-
+    
     # remove fragment identifiers
     links = [urldefrag(link)[0] for link in links]
 
@@ -141,11 +143,9 @@ def getlinks(pageurl, domain, soup):
         link if bool(urlparse(link).netloc) else urljoin(pageurl, link)
         for link in links
     ]
-
     # if only crawing a single domain, remove links to other domains
     if domain:
         links = [link for link in links if samedomain(urlparse(link).netloc, domain)]
-
     return links
 
 def pagehandler(pageurl, pageresponse, soup):
@@ -165,7 +165,7 @@ def samedomain(netloc1, netloc2):
     domain1 = netloc1.lower()
     if "." in domain1:
         domain1 = domain1.split(".")[-2] + "." + domain1.split(".")[-1]
-    if netloc2 is str: 
+    if isinstance(netloc2,str):
         domain2 = netloc2.lower()
         if "." in domain2:
             domain2 = domain2.split(".")[-2] + "." + domain2.split(".")[-1]
