@@ -19,6 +19,7 @@ import lib.settings as settings
 
 pages = Counter()
 failed = Counter()
+blacklist_checker = Counter()
 
 sublist = collections.deque()
 crawled = collections.deque()
@@ -57,14 +58,22 @@ def crawl(sess, url, domain):
         return None
 
 def append_url_in_queue(url, domain):
-    if not domain and getdomain(url) and not domain_in_list(urlparse(url).netloc,sublist) and not domain_in_list(urlparse(url).netloc,domains_blacklist) :
-        if input("New domain found : \""+getdomain(url)+"\" ! Crawl on this domain ? (yes/no): ").lower() in ("yes","y"):
-            if collectsubs(sublist, url):
-                sublist.append(urlparse(url).netloc)
-            if not url_in_list(url, crawled) and not url_in_list(url, pagequeue):
-                pagequeue.append(url)
-        else :
-            domains_blacklist.append(getdomain(url))
+    if not domain and getdomain(url) and not domain_in_list(urlparse(url).netloc,sublist):
+        while blacklist_checker.value >0:
+            continue
+        blacklist_checker.increment()
+        if not domain_in_list(getdomain(url),domains_blacklist):
+            if input("New domain found : \""+getdomain(url)+"\"! Crawl on this domain ? (yes/no): ").lower() in ("yes","y"):
+                blacklist_checker.decrement()
+                if collectsubs(sublist, url):
+                    sublist.append(urlparse(url).netloc)
+                if not url_in_list(url, crawled) and not url_in_list(url, pagequeue):
+                    pagequeue.append(url)
+            else :
+                domains_blacklist.append(getdomain(url))
+                blacklist_checker.decrement()
+        else:
+            blacklist_checker.decrement()
     else:
         if collectsubs(sublist, url):
             sublist.append(urlparse(url).netloc)
