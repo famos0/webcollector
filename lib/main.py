@@ -18,7 +18,7 @@ def main(argv):
     settings.init()
 
     try:
-        opts, args = getopt.getopt(argv,"hu:p:s:U:t:dm:T:H:R",["help","url=","test","pipeline=","subs-collector=","url-collector=","threads=","domains","maxpages=","header=","robots","timeout="])
+        opts, args = getopt.getopt(argv,"hu:p:s:U:t:dm:T:H:R",["help","url=","test","pipeline=","subs-collector=","url-collector=","threads=","domains","maxpages=","header=","robots","timeout=","proxy="])
     except getopt.GetoptError as err:
         print(str(err))
         print()
@@ -62,6 +62,9 @@ def main(argv):
             settings.robots = True
         elif o in ("--timeout"):
             settings.timeout = a
+        elif o in ("--proxy"):
+            proto, value = a.split(":")
+            settings.proxy.update({proto.strip() : value.strip()})
         else:
             print(o)
             assert False,"Unhandle option"

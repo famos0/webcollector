@@ -6,11 +6,11 @@
  - Get robots.txt
  - Use file of startup urls to get started
  - add timeout
-
+ - Add proxy
+ - Handle Redirection
 
 # TO ADD
 
- - Add proxy
  - Add schema correction if schema error
  - Better way to manage report writting 
  - Support of all HTTP Verb

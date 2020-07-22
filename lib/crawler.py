@@ -6,6 +6,7 @@ import getopt
 import os
 import threading
 import time
+import traceback
 from urllib.parse import urldefrag, urljoin, urlparse
 from lib.counter import Counter
 
@@ -21,14 +22,13 @@ failed = Counter()
 
 sublist = collections.deque()
 crawled = collections.deque()
-
+domains_blacklist = collections.deque()
 pagequeue = collections.deque()
 
 def crawl(sess, url, domain):
 
     try:
-        print(url)
-        response = sess.get(url,headers = settings.header)
+        response = sess.get(url,headers = settings.header, proxies=settings.proxy, allow_redirects=False)
     except (requests.exceptions.MissingSchema, requests.exceptions.InvalidSchema):
     # if something wrong in schema
         if len(settings.pipeline) == 0:
@@ -41,25 +41,57 @@ def crawl(sess, url, domain):
             failed.increment()
         return
     try:
-        if not response.headers["content-type"].startswith("text/html"):
-            return  # don't crawl non-HTML content
-    except:
+        if response.status_code >= 200 and response.status_code < 300:
+            if response.headers["content-type"].startswith("text/html"):
+                html_handler(url,response,domain)
+        elif response.headers["Location"]:
+            redirect_handler(url,response,domain)
+        else:
+            failed.increment()
+            print("Not supported status code")
+            return None  # don't crawl non-HTML content
+    except :
         failed.increment()
+        print("Request handling error")
+        traceback.print_exc()
         return None
 
-    soup = bs4.BeautifulSoup(response.text, "html.parser")
+def append_url_in_queue(url, domain):
+    if not domain and getdomain(url) and not domain_in_list(urlparse(url).netloc,sublist) and not domain_in_list(urlparse(url).netloc,domains_blacklist) :
+        if input("New domain found : \""+getdomain(url)+"\" ! Crawl on this domain ? (yes/no): ").lower() in ("yes","y"):
+            if collectsubs(sublist, url):
+                sublist.append(urlparse(url).netloc)
+            if not url_in_list(url, crawled) and not url_in_list(url, pagequeue):
+                pagequeue.append(url)
+        else :
+            domains_blacklist.append(getdomain(url))
+    else:
+        if collectsubs(sublist, url):
+            sublist.append(urlparse(url).netloc)
+        if not url_in_list(url, crawled) and not url_in_list(url, pagequeue):
+            pagequeue.append(url)
 
+
+def redirect_handler(url,response,domain):
+
+    crawled.append(url)
+    pages.increment()
+    redirect = response.headers["Location"]
+    if pagehandler(url, response):
+        append_url_in_queue(redirect,domain)
+    time.sleep(int(settings.timeout))
+    
+
+def html_handler(url,response,domain):
+    soup = bs4.BeautifulSoup(response.text, "html.parser")
     # process the page
     crawled.append(url)
     pages.increment()
-    if pagehandler(url, response, soup):
+    if pagehandler(url, response):
         # get the links from this page and add them to the crawler queue
         links = getlinks(url, domain, soup)
         for link in links:
-            if collectsubs(sublist, link):
-                sublist.append(urlparse(link).netloc)
-            if not url_in_list(link, crawled) and not url_in_list(link, pagequeue):
-                pagequeue.append(link)
+            append_url_in_queue(link,domain)
     time.sleep(int(settings.timeout))
 
 
@@ -78,12 +110,14 @@ def spider(startpage, maxpages, singledomain):
             for line in urls.readlines():
                 line = line.strip()
                 pagequeue.append(line)
+                sublist.append(getdomain(line))
                 if domain:
                     domain.append(urlparse(line).netloc)
                     pagequeue.extend(get_robots(urlparse(line).netloc))
                 
     else:
         pagequeue.append(startpage)
+        sublist.append(getdomain(startpage))
         domain = urlparse(startpage).netloc if singledomain else None
         if settings.robots and domain:
             pagequeue.extend(get_robots(domain))
@@ -108,8 +142,7 @@ def spider(startpage, maxpages, singledomain):
 
 
 def collectsubs(sublist,url):
-    """Check if the tested subdomain's url is already gathered, if not, add it and return the list.
-
+    """Check if the tested subdomain's url is already gathered
     sublist = list of subdomains
     url = tested url
     """
@@ -148,7 +181,7 @@ def getlinks(pageurl, domain, soup):
         links = [link for link in links if samedomain(urlparse(link).netloc, domain)]
     return links
 
-def pagehandler(pageurl, pageresponse, soup):
+def pagehandler(pageurl, pageresponse):
     """Function to be customized for processing of a single page.
 
     """
@@ -156,9 +189,22 @@ def pagehandler(pageurl, pageresponse, soup):
         if settings.pipeline=="urls":
             print(pageurl)
         else:
-            print(pageurl + " ({0} bytes)".format(len(pageresponse.text)))
+            print("("+str(pageresponse.status_code)+") "+  pageurl )
     return True
 
+def domain_in_list(domain, domain_list):
+    in_list = False
+    for d in domain_list:
+        if samedomain(domain,d):
+            in_list=True
+            break
+    return in_list
+
+def getdomain(url):
+    domain = urlparse(url).netloc.lower()
+    if "." in domain:
+        domain = domain.split(".")[-2] + "." + domain.split(".")[-1]
+    return domain
 
 def samedomain(netloc1, netloc2):
     """Determine whether two netloc values are the same domain."""

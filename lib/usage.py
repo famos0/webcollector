@@ -2,6 +2,7 @@
 
 import sys
 import lib.settings as settings
+import os
 
 def title(title):
     print()
@@ -58,6 +59,8 @@ def usage():
                                           this domain
     -R --robots                         - Feed the spider with robots.txt of the domain
     --timeout=SECONDS                   - Number of seconds to wait after a request
+    --proxy=PROXY                       - Set proxy in requests (exemple: --proxy 
+                                          "http: http://127.0.0.1:8080" --proxy "https: https://127.0.0.1:8080")
     """
     print(usage)
     sys.exit(0)
@@ -67,8 +70,16 @@ def extract(filename,list):
         f.write('\n'.join(list))
 
 def options():
+    if os.path.isfile(settings.url):
+        print("Startup urls: ")
+        for line in open(settings.url,"r").readlines():
+            print("\t - "+line.strip())
+    else :
+        print("Startup url: "+settings.url) 
     print("Staying on domain: "+("Yes" if settings.domain else "No"))
-    print("Maximum pages crawled: "+str(settings.maxpages))
-    print("Number of thread(s): "+str(settings.threads))
-    print("Header: "+str(settings.header))
+    print("Maximum pages crawled: "+(str(settings.maxpages) if settings.maxpages > 0 else "infinite")+" pages")
+    print("Number of thread(s): "+str(settings.threads)+" thread(s)")
     print("Feeding with robots.txt: "+("Yes" if settings.robots else "No"))
+    print("Timeout after request :"+str(settings.timeout)+" seconds")
+    print("Header: "+str(settings.header))
+    print("Proxy: "+str(settings.proxy))

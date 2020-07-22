@@ -34,4 +34,5 @@ def init():
     global maxpages
     global header
     global robots
+    global proxy
     global timeout

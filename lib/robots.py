@@ -16,5 +16,5 @@ def parse_robots(robots):
     return urls
 
 def get_robots(domain):
-    response = requests.get("http://"+domain+"/robots.txt")
+    response = requests.get("http://"+domain+"/robots.txt",header=settings.header, proxies=settings.proxy)
     return parse_robots(response)
