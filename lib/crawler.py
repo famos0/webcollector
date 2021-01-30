@@ -14,174 +14,121 @@ import requests
 
 from lib.usage import title
 from lib.robots import get_robots
-import lib.settings as settings
+from lib.requester import Requester
+from lib.response import Response
 
-pages = Counter()
-failed = Counter()
+class Controller(object):
 
-sublist = collections.deque()
-crawled = collections.deque()
+    def __init__(self, startpage, maxpages = 500, singledomain = True, concurancy = 10, robots = False, timeout = 0, header = None):
+        self.pages = Counter()
+        self.startpage = startpage
+        self.maxpages = maxpages
+        self.singledomain = singledomain
+        self.robots = robots
+        self.header = header
+        self.concurancy = concurancy
+        self.crawled = collections.deque()
+        self.urlqueue = collections.deque()
+        self.timeout = timeout
 
-pagequeue = collections.deque()
+    def crawl(self, sess, url, domain):
+        self.crawled.append(url)
+        self.pages.increment()
+        requester = Requester(url = url, session = sess)
+        response = requester.request()
+        if response != None:
+            soup = response.soup()
 
-def crawl(sess, url, domain):
+            # process the page
 
-    try:
-        print(url)
-        response = sess.get(url,headers = settings.header)
-    except (requests.exceptions.MissingSchema, requests.exceptions.InvalidSchema):
-    # if something wrong in schema
-        if len(settings.pipeline) == 0:
-            print("*Wrong schema*:", url)
-            failed.increment()
-        return
-    except (requests.exceptions.ConnectionError):
-        if len(settings.pipeline) == 0:
-            print("*Connection refused*:", url)
-            failed.increment()
-        return
-    try:
-        if not response.headers["content-type"].startswith("text/html"):
-            return  # don't crawl non-HTML content
-    except:
-        failed.increment()
-        return None
+            if self.pagehandler(url, response):
+                # get the links from this page and add them to the crawler queue
+                links = self.getlinks(url, domain, soup)
+                for link in links:
+                    if not self.url_in_list(link, self.crawled) and not self.url_in_list(link, self.urlqueue):
+                        self.urlqueue.append(link)
+            time.sleep(int(self.timeout))
+        else:
+            return None
 
-    soup = bs4.BeautifulSoup(response.text, "html.parser")
+    def spider(self):
+        self.show()
 
-    # process the page
-    crawled.append(url)
-    pages.increment()
-    if pagehandler(url, response, soup):
-        # get the links from this page and add them to the crawler queue
-        links = getlinks(url, domain, soup)
-        for link in links:
-            if collectsubs(sublist, link):
-                sublist.append(urlparse(link).netloc)
-            if not url_in_list(link, crawled) and not url_in_list(link, pagequeue):
-                pagequeue.append(link)
-    time.sleep(int(settings.timeout))
+        self.urlqueue.append(self.startpage)
+        domain = urlparse(self.startpage).netloc if self.singledomain else None
 
+        if self.robots and domain:
+            self.urlqueue.extend(get_robots(domain))
+        sess = requests.session()  
 
-def spider(startpage, maxpages, singledomain):
-    """Crawl the web starting from specified page.
+        while ((self.urlqueue or threading.active_count() > 1 ) and (True if self.maxpages == 0 else self.pages.value < self.maxpages)):
+            if threading.active_count() <= self.concurancy and self.urlqueue:
+                url = self.urlqueue.popleft()  # FIFO
+                t = threading.Thread(target=self.crawl,args=(sess,url,domain,))
+                t.start()
+        
+        while threading.active_count() > 1: continue
 
-    1st parameter = URL of starting page
-    maxpages = maximum number of pages to crawl
-    singledomain = whether to only crawl links within startpage's domain
-    """
-    # queue of pages to be crawled
-    if (os.path.isfile(startpage)):
-        domain = []
-        # if feeded with filename, take the domain of the first line
-        with  open(startpage,'r') as urls:
-            for line in urls.readlines():
-                line = line.strip()
-                pagequeue.append(line)
-                if domain:
-                    domain.append(urlparse(line).netloc)
-                    pagequeue.extend(get_robots(urlparse(line).netloc))
-                
-    else:
-        pagequeue.append(startpage)
-        domain = urlparse(startpage).netloc if singledomain else None
-        if settings.robots and domain:
-            pagequeue.extend(get_robots(domain))
-    sess = requests.session()  
-
-    if settings.pipeline == "" :
-        print(settings.pipeline)
-        title("crawled urls")
-
-    while ((pagequeue or threading.active_count() > 1 )and (True if maxpages == 0  else  pages.value < maxpages)):
-        if threading.active_count() <= settings.threads and pagequeue:
-            url = pagequeue.popleft()  # get next page to crawl (FIFO queue)
-            t = threading.Thread(target=crawl,args=(sess,url,domain,))
-            t.start()
-    
-    while threading.active_count() > 1: continue
-
-    if len(settings.pipeline) == 0:
         print()
-        print("{0} pages crawled, {1} links failed.".format(pages.value, failed.value))
-    return sublist, crawled
+        print("{0} pages crawled".format(self.pages.value))
+        return self.crawled
 
+    def getlinks(self, url, domain, soup):
+    
+        # get target URLs for all links on the page
+        links = [a.attrs.get("href") for a in soup.select("a[href]")]
+        
+        # remove fragment identifiers
+        links = [urldefrag(link)[0] for link in links]
 
-def collectsubs(sublist,url):
-    """Check if the tested subdomain's url is already gathered, if not, add it and return the list.
+        # remove any empty strings
+        links = [link for link in links if link]
 
-    sublist = list of subdomains
-    url = tested url
-    """
-    sub = urlparse(url).netloc
-    if sub.lower() in (string.lower() for string in sublist):
-        return False
-    else:
-        if settings.pipeline == 'domains':
-            print(sub)
+        # if it's a relative link, change to absolute
+        links = [
+            link if bool(urlparse(link).netloc) else urljoin(url, link)
+            for link in links
+        ]
+        # if only crawing a single domain, remove links to other domains
+        if domain:
+            links = [link for link in links if self.samedomain(urlparse(link).netloc, domain)]
+        return links
+
+    def pagehandler(self, url, response):
+
+        print("{} : {}".format(url,str(int(response))))
         return True
 
-def getlinks(pageurl, domain, soup):
-    """Returns a list of links from from this page to be crawled.
 
-    pageurl = URL of this page
-    domain = domain being crawled (None to return links to *any* domain)
-    soup = BeautifulSoup object for this page
-    """
-
-    # get target URLs for all links on the page
-    links = [a.attrs.get("href") for a in soup.select("a[href]")]
-    
-    # remove fragment identifiers
-    links = [urldefrag(link)[0] for link in links]
-
-    # remove any empty strings
-    links = [link for link in links if link]
-
-    # if it's a relative link, change to absolute
-    links = [
-        link if bool(urlparse(link).netloc) else urljoin(pageurl, link)
-        for link in links
-    ]
-    # if only crawing a single domain, remove links to other domains
-    if domain:
-        links = [link for link in links if samedomain(urlparse(link).netloc, domain)]
-    return links
-
-def pagehandler(pageurl, pageresponse, soup):
-    """Function to be customized for processing of a single page.
-
-    """
-    if settings.pipeline !="domains":
-        if settings.pipeline=="urls":
-            print(pageurl)
+    def samedomain(self, netloc1, netloc2):
+        """Determine whether two netloc values are the same domain."""
+        domain1 = netloc1.lower()
+        if "." in domain1:
+            domain1 = domain1.split(".")[-2] + "." + domain1.split(".")[-1]
+        if isinstance(netloc2,str):
+            domain2 = netloc2.lower()
+            if "." in domain2:
+                domain2 = domain2.split(".")[-2] + "." + domain2.split(".")[-1]
+            return domain1 == domain2
         else:
-            print(pageurl + " ({0} bytes)".format(len(pageresponse.text)))
-    return True
+            domain2 = []
+            for nt2 in netloc2:
+                d2 = nt2.lower()
+                if "." in d2:
+                    d2 = d2.split(".")[-2] + "." + d2.split(".")[-1]
+                domain2.append(d2)
+            return domain1 in domain2
 
 
-def samedomain(netloc1, netloc2):
-    """Determine whether two netloc values are the same domain."""
-    domain1 = netloc1.lower()
-    if "." in domain1:
-        domain1 = domain1.split(".")[-2] + "." + domain1.split(".")[-1]
-    if isinstance(netloc2,str):
-        domain2 = netloc2.lower()
-        if "." in domain2:
-            domain2 = domain2.split(".")[-2] + "." + domain2.split(".")[-1]
-        return domain1 == domain2
-    else:
-        domain2 = []
-        for nt2 in netloc2:
-            d2 = nt2.lower()
-            if "." in d2:
-                d2 = d2.split(".")[-2] + "." + d2.split(".")[-1]
-            domain2.append(d2)
-        return domain1 in domain2
+    def url_in_list(self, url, listobj):
+        http_version = url.replace("https://", "http://")
+        https_version = url.replace("http://", "https://")
+        return (http_version in listobj) or (https_version in listobj)
 
-
-def url_in_list(url, listobj):
-    """Determine whether a URL is in a list of URLs."""
-    http_version = url.replace("https://", "http://")
-    https_version = url.replace("http://", "https://")
-    return (http_version in listobj) or (https_version in listobj)
+    def show(self):
+        print("Starting from : {}".format(self.startpage))
+        print("Maximum pages crawled: "+str(self.maxpages))
+        print("Number of thread(s): "+str(self.concurancy))
+        print("Header: "+str(self.header))
+        print("Feeding with robots.txt: "+("Yes" if self.robots else "No"))
+        print("")
