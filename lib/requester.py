@@ -31,6 +31,7 @@ class Requester(object):
             response.status_code,
             response.headers,
             response.text,
-            response.content
+            response.content,
+            self.url
         )
         return result

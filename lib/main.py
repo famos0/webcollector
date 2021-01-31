@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-"""Simple Python 3 web crawler, to be extended for various uses.
-"""
 import sys
 import getopt
 import os
@@ -22,10 +20,11 @@ class Program(object):
         self.maxpages = 500
         self.robots = False
         self.timeout = 0
+        self.dump = False
 
     def main(self, argv):
         try:
-            opts, args = getopt.getopt(argv,"hu:o:t:dm:T:H:R",["help","url=","outputfile=","threads=","domains","maxpages=","header=","robots","timeout="])
+            opts, args = getopt.getopt(argv,"hu:o:t:dm:T:H:RD:",["help","url=","outputfile=","threads=","domains","maxpages=","header=","robots","timeout=","dump="])
         except getopt.GetoptError as err:
             print(str(err))
             print()
@@ -54,11 +53,13 @@ class Program(object):
                 self.threads = int(a)
             elif o in ("-H","--header"):
                 self.header, value = a.split(":")
-                self.header.update({header.strip() : value.strip()})
+                self.header.update({self.header.strip() : value.strip()})
             elif o in ("-R","--robots"):
                 self.robots = True
             elif o in ("--timeout"):
                 self.timeout = a
+            elif o in ("-D","--dump"):
+                self.dump = a
             else:
                 print(o)
                 assert False,"Unhandle option"
@@ -66,7 +67,7 @@ class Program(object):
         # set stdout to support UTF-8
         sys.stdout = open(sys.stdout.fileno(), mode="w", encoding="utf-8", buffering=1)
         banner() 
-        controller = Controller(startpage=self.url, maxpages=self.maxpages, singledomain=self.domain, concurancy = self.threads, robots = self.robots, timeout = self.timeout, header = self.header)      
+        controller = Controller(startpage=self.url, maxpages=self.maxpages, singledomain=self.domain, concurancy = self.threads, robots = self.robots, timeout = self.timeout, header = self.header, dump = self.dump)      
         urls = controller.spider()
     
         if len(self.outputfile) > 0:

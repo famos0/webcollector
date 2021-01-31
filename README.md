@@ -4,9 +4,8 @@
 
  - Header management
  - Get robots.txt
- - Use file of startup urls to get started
  - add timeout
-
+ - dump mode
 
 # TO ADD
 

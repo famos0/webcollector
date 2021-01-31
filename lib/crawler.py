@@ -19,13 +19,14 @@ from lib.response import Response
 
 class Controller(object):
 
-    def __init__(self, startpage, maxpages = 500, singledomain = True, concurancy = 10, robots = False, timeout = 0, header = None):
+    def __init__(self, startpage, maxpages = 500, singledomain = True, concurancy = 10, robots = False, timeout = 0, header = None, dump = False):
         self.pages = Counter()
         self.startpage = startpage
         self.maxpages = maxpages
         self.singledomain = singledomain
         self.robots = robots
         self.header = header
+        self.dump = dump
         self.concurancy = concurancy
         self.crawled = collections.deque()
         self.urlqueue = collections.deque()
@@ -38,7 +39,9 @@ class Controller(object):
         response = requester.request()
         if response != None:
             soup = response.soup()
-
+            
+            if self.dump:
+                response.dump(self.dump) 
             # process the page
 
             if self.pagehandler(url, response):
