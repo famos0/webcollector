@@ -93,10 +93,6 @@ class Controller(object):
                     if not self.urlqueue:
                         break
                 
-
-        #while ((self.urlqueue or threading.active_count() > 1) and (True if self.maxpages == 0 else self.pages.value < self.maxpages)):
-        print(self.urlqueue)
-        print()
         while threading.active_count() > 1: continue
 
         print()
@@ -157,8 +153,15 @@ class Controller(object):
 
     def show(self):
         print("Starting from : {}".format(self.startpage))
-        print("Maximum pages crawled: "+str(self.maxpages))
+        print("Maximum pages crawled: "+("Infinite" if self.maxpages == 0 else str(self.maxpages)))
         print("Number of thread(s): "+str(self.concurancy))
+        print("Timeout: " + str(self.timeout))
+
         print("Header: "+str(self.header))
-        print("Feeding with robots.txt: "+("Yes" if self.robots else "No"))
+        print("Cookies: "+str(self.cookies))
+        print(" Proxy: "+str(self.proxy))
+        if self.robots
+            print("Feeding with robots.txt")
+        if self.dump
+            print("Dump mode activated")
         print("")

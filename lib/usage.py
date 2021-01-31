@@ -33,7 +33,7 @@ def usage():
     banner()
     usage = """Python WebCollector vO.1
 
-    Usage: webcollector -u startup-url
+    Usage: python3 webcollector.py -u startup-url
 
     -u --url=startup-url                - url where to start crawling.
     
