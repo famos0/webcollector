@@ -19,7 +19,7 @@ from lib.response import Response
 
 class Controller(object):
 
-    def __init__(self, startpage, maxpages = 500, singledomain = True, concurancy = 10, robots = False, timeout = 0, header = None, dump = False):
+    def __init__(self, startpage, cookies = {}, maxpages = 500, singledomain = True, concurancy = 10, robots = False, timeout = 0, header = {}, dump = False, proxy = None):
         self.pages = Counter()
         self.startpage = startpage
         self.maxpages = maxpages
@@ -31,27 +31,42 @@ class Controller(object):
         self.crawled = collections.deque()
         self.urlqueue = collections.deque()
         self.timeout = timeout
+        self.cookies = cookies
+
+        if proxy != None:
+            self.proxy = { urlparse(proxy).scheme : proxy}
+        else:
+            self.proxy = proxy
 
     def crawl(self, sess, url, domain):
         self.crawled.append(url)
         self.pages.increment()
-        requester = Requester(url = url, session = sess)
+        requester = Requester(url = url, session = sess, proxy = self.proxy, headers = self.header, cookies = self.cookies)
         response = requester.request()
-        if response != None:
-            soup = response.soup()
-            
-            if self.dump:
-                response.dump(self.dump) 
-            # process the page
+        try: 
+            if response != None:
+                if self.dump:
+                    response.dump(self.dump) 
+                if self.pagehandler(url, response):
 
-            if self.pagehandler(url, response):
-                # get the links from this page and add them to the crawler queue
-                links = self.getlinks(url, domain, soup)
-                for link in links:
-                    if not self.url_in_list(link, self.crawled) and not self.url_in_list(link, self.urlqueue):
-                        self.urlqueue.append(link)
-            time.sleep(int(self.timeout))
-        else:
+                    if response.status in [300,301,302,303,304,305,306,307,308]:
+                        link = response.headers["Location"]
+                        link if bool(urlparse(link).netloc) else urljoin(url, link)
+                        if not self.url_in_list(link, self.crawled) and not self.url_in_list(link, self.urlqueue):
+                            self.urlqueue.append(link)
+
+                    if response.headers["content-type"].startswith("text/html"):
+                            soup = response.soup()
+                            # get the links from this page and add them to the queue
+                            links = self.getlinks(url, domain, soup)
+                            for link in links:
+                                if not self.url_in_list(link, self.crawled) and not self.url_in_list(link, self.urlqueue):
+                                    self.urlqueue.append(link)
+                time.sleep(int(self.timeout))
+            else:
+                time.sleep(int(self.timeout))
+                return None
+        except: 
             return None
 
     def spider(self):
@@ -64,12 +79,24 @@ class Controller(object):
             self.urlqueue.extend(get_robots(domain))
         sess = requests.session()  
 
-        while ((self.urlqueue or threading.active_count() > 1 ) and (True if self.maxpages == 0 else self.pages.value < self.maxpages)):
-            if threading.active_count() <= self.concurancy and self.urlqueue:
-                url = self.urlqueue.popleft()  # FIFO
-                t = threading.Thread(target=self.crawl,args=(sess,url,domain,))
-                t.start()
-        
+        while 1:
+            if self.pages.value == self.maxpages and self.maxpages != 0:
+                break
+            if self.urlqueue:
+                if threading.active_count() <= self.concurancy:
+                    url = self.urlqueue.popleft()  # FIFO
+                    t = threading.Thread(target=self.crawl,args=(sess,url,domain,))
+                    t.start()
+            else:
+                if threading.active_count() == 1:
+                    time.sleep(1)
+                    if not self.urlqueue:
+                        break
+                
+
+        #while ((self.urlqueue or threading.active_count() > 1) and (True if self.maxpages == 0 else self.pages.value < self.maxpages)):
+        print(self.urlqueue)
+        print()
         while threading.active_count() > 1: continue
 
         print()

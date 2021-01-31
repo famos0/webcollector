@@ -21,10 +21,12 @@ class Program(object):
         self.robots = False
         self.timeout = 0
         self.dump = False
+        self.proxy = None
+        self.cookies = {}
 
     def main(self, argv):
         try:
-            opts, args = getopt.getopt(argv,"hu:o:t:dm:T:H:RD:",["help","url=","outputfile=","threads=","domains","maxpages=","header=","robots","timeout=","dump="])
+            opts, args = getopt.getopt(argv,"hu:o:t:dm:T:H:RD:p:c:",["help","url=","outputfile=","threads=","domains","maxpages=","header=","robots","timeout=","dump=","proxy=","cookie="])
         except getopt.GetoptError as err:
             print(str(err))
             print()
@@ -35,7 +37,7 @@ class Program(object):
             elif o in ("-o","--outputfile"):
                 self.outputfile = a       
             elif o in ("-d","--domains"):
-                self.singledomain = False
+                self.domain = False
             elif o in ("-m","--maxpages"):
                 if int(a) < 0 :
                     print("Maxpages must be equal or greater than 0.")
@@ -52,14 +54,19 @@ class Program(object):
                     exit(0)
                 self.threads = int(a)
             elif o in ("-H","--header"):
-                self.header, value = a.split(":")
-                self.header.update({self.header.strip() : value.strip()})
+                header, value = a.split(":")
+                self.header.update({header.strip() : value.strip()})
+            elif o in ("-c","--cookie"):
+                cookies, value = a.split(":")
+                self.cookies.update({cookies.strip() : value.strip()})    
             elif o in ("-R","--robots"):
                 self.robots = True
             elif o in ("--timeout"):
                 self.timeout = a
             elif o in ("-D","--dump"):
                 self.dump = a
+            elif o in ("-p","--proxy"):
+                self.proxy = a
             else:
                 print(o)
                 assert False,"Unhandle option"
@@ -67,8 +74,15 @@ class Program(object):
         # set stdout to support UTF-8
         sys.stdout = open(sys.stdout.fileno(), mode="w", encoding="utf-8", buffering=1)
         banner() 
-        controller = Controller(startpage=self.url, maxpages=self.maxpages, singledomain=self.domain, concurancy = self.threads, robots = self.robots, timeout = self.timeout, header = self.header, dump = self.dump)      
-        urls = controller.spider()
-    
-        if len(self.outputfile) > 0:
-            extract(self.outputfile,urls) 
+        
+        try:
+            controller = Controller(startpage=self.url, maxpages=self.maxpages, singledomain=self.domain, concurancy = self.threads, robots = self.robots, timeout = self.timeout, header = self.header, dump = self.dump, proxy = self.proxy, cookies = self.cookies)      
+            urls = controller.spider()
+        
+            if len(self.outputfile) > 0:
+                extract(self.outputfile,urls)
+
+        except KeyboardInterrupt:
+
+            if len(self.outputfile) > 0:
+                extract(self.outputfile,urls)
