@@ -51,7 +51,8 @@ class Controller(object):
 
                     if response.status in [300,301,302,303,304,305,306,307,308]:
                         link = response.headers["Location"]
-                        link if bool(urlparse(link).netloc) else urljoin(url, link)
+                        if urlparse(link).netloc == "":
+                            link = urljoin(url, link)
                         if not self.url_in_list(link, self.crawled) and not self.url_in_list(link, self.urlqueue):
                             self.urlqueue.append(link)
 
@@ -160,8 +161,8 @@ class Controller(object):
         print("Header: "+str(self.header))
         print("Cookies: "+str(self.cookies))
         print(" Proxy: "+str(self.proxy))
-        if self.robots
+        if self.robots:
             print("Feeding with robots.txt")
-        if self.dump
+        if self.dump:
             print("Dump mode activated")
         print("")
